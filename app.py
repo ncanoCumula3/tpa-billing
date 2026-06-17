@@ -120,6 +120,28 @@ def create_app():
         flash(f"Loaded {n} metric(s) into the {period.month} eligibility period.", "ok")
         return redirect(url_for("period_detail", pid=period.id))
 
+    @app.route("/contracts/<int:cid>/eligibility-template.csv")
+    def eligibility_template(cid):
+        """A ready-to-fill eligibility CSV, pre-seeded with the exact metric
+        keys this contract's fee schedule bills on. The TPA fills the `count`
+        column from the client's roster/claims feed and uploads it back."""
+        c = Contract.query.get_or_404(cid)
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(["metric_key", "count", "label"])
+        seen = set()
+        for l in c.lines:
+            if l.basis == FLAT or not l.metric_key or l.metric_key in seen:
+                continue
+            seen.add(l.metric_key)
+            # baseline roster count is a hint of the expected magnitude, not a bill
+            w.writerow([l.metric_key, l.baseline_count or 0, l.service])
+        if not seen:
+            w.writerow(["enrolled_employees", 0, "Enrolled employees"])
+        fname = f"eligibility-{c.number or c.id}-template.csv"
+        return Response(buf.getvalue(), mimetype="text/csv",
+                        headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
     @app.route("/contracts/<int:cid>")
     def contract_detail(cid):
         c = Contract.query.get_or_404(cid)

@@ -77,7 +77,30 @@
     <input name="label" placeholder="Label (optional)" style="width:200px">
     <button class="btn sm" type="submit">Upload eligibility</button>
   </form>
-  <p class="muted" style="margin:0 0 14px">CSV columns: <b>metric_key</b>, <b>count</b> (optional <b>label</b>) — one row per metric, e.g. <code>enrolled_employees,412</code>.</p>
+  <p class="muted" style="margin:0 0 6px">CSV columns: <b>metric_key</b>, <b>count</b> (optional <b>label</b>) — one row per metric, e.g. <code>enrolled_employees,412</code>.</p>
+  <div style="background:var(--slate-50,#f6f7f9);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:0 0 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <b>Eligibility template for this contract</b>
+        <div class="muted" style="font-size:13px;margin-top:2px">Pre-filled with the metric keys this fee schedule bills on — fill the <code>count</code> column from your roster/claims feed and upload it back.</div>
+      </div>
+      <a class="btn ghost sm" href="{{ url_for('eligibility_template', cid=c.id) }}">Download template CSV</a>
+    </div>
+    {% set keys = c.lines | rejectattr('basis','equalto','FLAT') | selectattr('metric_key') | list %}
+    {% if keys %}
+    <table style="margin-top:10px">
+      <thead><tr><th>Metric key</th><th>Pull from (fee line)</th><th>Basis</th><th class="num">Roster qty on file</th></tr></thead>
+      <tbody>
+        {% for l in keys %}
+        <tr><td><code>{{ l.metric_key }}</code></td><td>{{ l.service }}</td><td>{{ l.basis_label }}</td><td class="num">{{ l.baseline_count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">How to pull a metric key: it's the identifier on each fee line above. For a <b>per-employee</b> fee, count distinct enrolled employees that month; for a <b>per-participant</b> fee, count covered participants; for a <b>per-transaction</b> fee, count the processed claims/transactions. Flat fees need no metric. The <code>count</code> you enter is what the invoice reconciles the contracted rate against.</p>
+    {% else %}
+    <p class="muted" style="font-size:12px;margin:8px 0 0">This contract has no metric-based fee lines yet — add a per-employee, per-participant, or per-transaction line on the contract to drive eligibility reconciliation.</p>
+    {% endif %}
+  </div>
   {% if periods %}
   <table>
     <thead><tr><th>Activity period</th><th>Source</th><th class="num">Metrics</th><th></th></tr></thead>

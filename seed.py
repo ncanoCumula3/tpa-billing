@@ -59,19 +59,34 @@ def seed():
                                         rate=rate, metric_key=mk, baseline_count=base,
                                         active=active))
 
-        period = ActivityPeriod(client_id=rb.id, month="2026-03",
-                                label="March 2026 eligibility", source="Eligibility file (ADP)")
-        db.session.add(period)
-        db.session.flush()
-        metrics = [
-            ("enrolled_employees", "Enrolled employees", 412),
-            ("dental_enrolled", "Dental / vision enrolled", 401),
-            ("fsa_participants", "FSA participants", 171),
-            ("cobra_members", "COBRA members", 14),
-            ("claims_processed", "Claims processed", 540),
+        # Four monthly eligibility files for the same contract — the roster
+        # drifts month to month, so reconciliation tells a different story each
+        # period (March is the one that drifts off the baseline into yellow/red).
+        labels = {
+            "enrolled_employees": "Enrolled employees",
+            "dental_enrolled": "Dental / vision enrolled",
+            "fsa_participants": "FSA participants",
+            "cobra_members": "COBRA members",
+            "claims_processed": "Claims processed",
+        }
+        eligibility_files = [
+            # month,      source,                       medical dental fsa cobra claims
+            ("2026-01", "Eligibility file (ADP)",        405,   380,  178, 12,   498),
+            ("2026-02", "Eligibility file (ADP)",        409,   392,  175, 13,   521),
+            ("2026-03", "Eligibility file (ADP)",        412,   401,  171, 14,   540),
+            ("2026-04", "Eligibility file (Workday)",    418,   405,  169, 15,   562),
         ]
-        for mk, lbl, n in metrics:
-            db.session.add(ActivityMetric(period_id=period.id, metric_key=mk, label=lbl, count=n))
+        for month, source, med, den, fsa, cob, clm in eligibility_files:
+            period = ActivityPeriod(client_id=rb.id, month=month,
+                                    label=f"{month} eligibility", source=source)
+            db.session.add(period)
+            db.session.flush()
+            counts = {"enrolled_employees": med, "dental_enrolled": den,
+                      "fsa_participants": fsa, "cobra_members": cob,
+                      "claims_processed": clm}
+            for mk, n in counts.items():
+                db.session.add(ActivityMetric(period_id=period.id, metric_key=mk,
+                                              label=labels[mk], count=n))
 
         # ---------------- two more clients for pipeline colour ----------------
         cascade = Client(name="Cascade Health Group", industry="Healthcare",
