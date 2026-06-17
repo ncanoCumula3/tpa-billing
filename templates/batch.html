@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% set active='batch' %}
+{% block title %}Batch invoicing · {{ PRODUCT }}{% endblock %}
+{% block body %}
+<h1>Batch invoicing</h1>
+<p class="sub">Run a whole billing month at once — flag the contracts to invoice, generate every draft together, then resolve any discrepancies in one review.</p>
+
+<form method="get" action="{{ url_for('batch') }}" class="btnrow" style="margin-bottom:14px">
+  <div><div class="lbl">Billing month</div>
+    <select name="month" onchange="this.form.submit()">
+      {% for m in months %}<option value="{{ m }}" {{ 'selected' if m==month }}>{{ m }}</option>{% endfor %}
+    </select></div>
+  <noscript><button class="btn ghost sm" type="submit">Load month</button></noscript>
+</form>
+
+{% if rows %}
+<form method="post" action="{{ url_for('batch_generate') }}">
+  <input type="hidden" name="month" value="{{ month }}">
+  <div class="panel tight">
+  <table>
+    <thead><tr>
+      <th style="width:34px"><input type="checkbox" id="all" checked onclick="toggleAll(this)"></th>
+      <th>Contract</th><th>Client</th><th>Eligibility file</th><th>In force</th><th class="num">Est. / mo</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      {% set billable = r.period and r.in_force %}
+      <tr style="{{ '' if billable else 'opacity:.5' }}">
+        <td>{% if billable %}<input type="checkbox" class="pick" name="contract_id" value="{{ r.contract.id }}" checked>{% else %}—{% endif %}</td>
+        <td><a href="{{ url_for('contract_detail', cid=r.contract.id) }}">{{ r.contract.name }}</a><br>
+          <span class="muted" style="font-size:12px">{{ r.contract.number }}</span></td>
+        <td>{{ r.contract.client.name }}</td>
+        <td>{% if r.period %}<span class="pill indigo">{{ r.period.label or r.period.month }}</span>{% else %}<span class="muted">no file for {{ month }}</span>{% endif %}</td>
+        <td>{% if r.in_force %}<span class="pill green">Yes</span>{% else %}<span class="pill red">Not in force</span>{% endif %}</td>
+        <td class="num">${{ '{:,.0f}'.format(r.estimate) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="btnrow" style="margin-top:16px">
+    <button class="btn" type="submit">Generate invoices for flagged contracts</button>
+    <span class="muted">Each flagged contract is reconciled against its {{ month }} eligibility file.</span>
+  </div>
+</form>
+{% else %}
+  <p class="muted">No eligibility files loaded yet — upload one on a contract to enable batch invoicing.</p>
+{% endif %}
+
+<script>
+function toggleAll(cb){ document.querySelectorAll('.pick').forEach(p => p.checked = cb.checked); }
+</script>
+{% endblock %}

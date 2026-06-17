@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% set active='batch' %}
+{% block title %}Batch review · {{ PRODUCT }}{% endblock %}
+{% block body %}
+<div class="crumb"><a href="{{ url_for('batch') }}">Batch invoicing</a> / Review</div>
+<h1>Review &amp; resolve</h1>
+<p class="sub">{{ invoices|length }} invoice(s) generated. Clean ones are ready to bill; any with a <b>discrepancy</b> need a decision before they close.</p>
+
+{% set flagged = invoices | selectattr('counts') | list %}
+<div class="panel" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+  <div><b>For every flagged discrepancy, apply:</b>
+    <span class="muted" style="font-size:13px">sets all flagged invoices below — you can still override each one.</span></div>
+  <div class="btnrow">
+    <button type="button" class="btn ghost sm" onclick="bulk('close')">Close &amp; bill clean</button>
+    <button type="button" class="btn ghost sm" onclick="bulk('hold')">Hold for correction</button>
+    <button type="button" class="btn grey sm" onclick="bulk('void')">Void</button>
+    <button type="button" class="btn grey sm" onclick="bulk('draft')">Leave as draft</button>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('batch_resolve') }}">
+{% for inv in invoices %}
+  {% set c = inv.counts() %}
+  {% set discrepancy = c.yellow > 0 or c.red > 0 %}
+  <input type="hidden" name="invoice_id" value="{{ inv.id }}">
+  <div class="panel" style="border-left:4px solid {{ 'var(--red)' if c.red>0 else 'var(--amber)' if c.yellow>0 else 'var(--green)' }}">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <a href="{{ url_for('invoice_detail', iid=inv.id) }}"><b>{{ inv.number }}</b></a>
+        · {{ inv.client.name }} · {{ inv.contract.number if inv.contract }} · {{ inv.month }}
+        {% if discrepancy %}<span class="pill {{ 'red' if c.red>0 else 'amber' }}" style="margin-left:6px">Discrepancy — needs a decision</span>
+        {% else %}<span class="pill green" style="margin-left:6px">Reconciled — ready to bill</span>{% endif %}
+      </div>
+      <div class="muted" style="font-size:13px">
+        <span style="color:var(--green)">{{ c.green }} clean</span> ·
+        <span style="color:var(--amber)">{{ c.yellow }} variance</span> ·
+        <span style="color:var(--red)">{{ c.red }} hold</span> ·
+        bill ${{ '{:,.2f}'.format(inv.billed_total) }} · held ${{ '{:,.2f}'.format(inv.held_total) }}
+      </div>
+    </div>
+
+    {% if discrepancy %}
+    <ul style="margin:10px 0 0;padding-left:18px">
+      {% for l in inv.lines if l.recon_status != 'green' %}
+        <li style="margin:2px 0"><span class="pill {{ 'red' if l.recon_status=='red' else 'amber' }}" style="font-size:11px">{{ l.service }}</span>
+          <span class="muted" style="font-size:13px">{{ l.recon_reason }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <div class="btnrow" style="margin-top:12px">
+      <div><div class="lbl">Action</div>
+        <select name="action_{{ inv.id }}" class="act" data-flag="{{ '1' if discrepancy else '0' }}">
+          <option value="close" {{ 'selected' if not discrepancy }}>Close &amp; bill clean (red lines held)</option>
+          <option value="hold" {{ 'selected' if discrepancy }}>Hold for correction (nothing bills)</option>
+          <option value="void">Void</option>
+          <option value="draft">Leave as draft</option>
+        </select></div>
+    </div>
+  </div>
+{% endfor %}
+
+  <div class="btnrow" style="margin-top:18px">
+    <button class="btn" type="submit">Apply decisions</button>
+    <a class="btn grey" href="{{ url_for('batch') }}">Back</a>
+  </div>
+</form>
+
+<script>
+function bulk(v){ document.querySelectorAll('.act').forEach(s => { if(s.dataset.flag==='1') s.value = v; }); }
+</script>
+{% endblock %}

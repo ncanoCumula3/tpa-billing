@@ -213,6 +213,80 @@ def create_app():
                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         headers={"Content-Disposition": f'attachment; filename="{inv.number}.xlsx"'})
 
+    # ---------- batch invoicing ----------
+    @app.route("/batch")
+    def batch():
+        """Pick a billing month, then flag the contracts to invoice in one run."""
+        month = (request.args.get("month") or "").strip()
+        months = sorted({p.month for p in ActivityPeriod.query.all()}, reverse=True)
+        if not month and months:
+            month = months[0]
+        rows = []
+        if month:
+            for c in Contract.query.order_by(Contract.id).all():
+                period = ActivityPeriod.query.filter_by(
+                    client_id=c.client_id, month=month).first()
+                rows.append({"contract": c, "period": period,
+                             "in_force": c.active_for(month),
+                             "estimate": c.monthly_estimate})
+        return render_template("batch.html", months=months, month=month, rows=rows)
+
+    @app.route("/batch/generate", methods=["POST"])
+    def batch_generate():
+        month = (request.form.get("month") or "").strip()
+        cids = request.form.getlist("contract_id", type=int)
+        made = []
+        for cid in cids:
+            c = Contract.query.get(cid)
+            if not c:
+                continue
+            period = ActivityPeriod.query.filter_by(
+                client_id=c.client_id, month=month).first()
+            if not period:
+                continue
+            made.append(invoicer.generate(c, period))
+        if not made:
+            flash("No invoices generated — flag at least one contract that has an "
+                  "eligibility file for that month.", "warn")
+            return redirect(url_for("batch", month=month))
+        ids = ",".join(str(i.id) for i in made)
+        flash(f"Generated {len(made)} draft invoice(s) for {month}. "
+              "Review discrepancies below and choose what to do.", "ok")
+        return redirect(url_for("batch_review", ids=ids))
+
+    @app.route("/batch/review")
+    def batch_review():
+        ids = [int(x) for x in (request.args.get("ids") or "").split(",")
+               if x.strip().isdigit()]
+        invoices = [Invoice.query.get(i) for i in ids]
+        invoices = [i for i in invoices if i]
+        return render_template("batch_review.html", invoices=invoices,
+                               ids=request.args.get("ids", ""))
+
+    @app.route("/batch/resolve", methods=["POST"])
+    def batch_resolve():
+        s = {"close": 0, "hold": 0, "void": 0, "draft": 0, "billed": 0.0}
+        for iid in request.form.getlist("invoice_id", type=int):
+            inv = Invoice.query.get(iid)
+            if not inv:
+                continue
+            action = request.form.get(f"action_{iid}", "draft")
+            if action == "close":
+                invoicer.close(inv)
+                s["close"] += 1
+                s["billed"] += inv.billed_total
+            elif action == "hold":
+                invoicer.hold(inv, "batch — discrepancy, awaiting correction")
+                s["hold"] += 1
+            elif action == "void":
+                invoicer.void(inv, "batch — rejected at review")
+                s["void"] += 1
+            else:
+                s["draft"] += 1
+        flash(f"Batch applied — {s['close']} closed (${s['billed']:,.2f} billed), "
+              f"{s['hold']} held, {s['void']} voided, {s['draft']} left as draft.", "ok")
+        return redirect(url_for("invoices"))
+
     # ---------- reporting ----------
     @app.route("/reports")
     def reports():

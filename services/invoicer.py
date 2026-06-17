@@ -68,6 +68,16 @@ def reopen(invoice):
     return invoice
 
 
+def hold(invoice, reason=""):
+    """Park the invoice for correction — nothing bills until it's reopened."""
+    invoice.status = "Hold"
+    invoice.closed_at = None
+    if reason:
+        invoice.terms = (invoice.terms or "") + f" · HOLD: {reason}"
+    db.session.commit()
+    return invoice
+
+
 def void(invoice, reason=""):
     """Cancel the invoice — nothing is billed; it stays on file for the record."""
     invoice.status = "Void"
