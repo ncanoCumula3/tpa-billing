@@ -8,7 +8,7 @@
   {% if contract %}<a href="{{ url_for('contract_detail', cid=contract.id) }}">{{ client.name }}</a>{% else %}{{ client.name }}{% endif %}
 </div>
 <h1>Invoice {{ inv.number }}
-  <span class="pill {{ 'green' if inv.status=='Closed' else 'amber' if inv.status=='Hold' else 'blue' if inv.status=='Issued' else 'grey' }}">{{ inv.status }}</span>
+  <span class="pill {{ 'green' if inv.status=='Closed' else 'red' if inv.status=='Void' else 'amber' if inv.status=='Hold' else 'blue' if inv.status=='Issued' else 'grey' }}">{{ inv.status }}</span>
 </h1>
 <p class="sub">{{ client.name }} · {{ inv.month }} · {{ contract.number if contract }} · {{ inv.terms }}</p>
 
@@ -31,7 +31,13 @@
       <form method="post" action="{{ url_for('reopen_invoice', iid=inv.id) }}"><button class="btn grey" type="submit">Re-open</button></form>
     {% endif %}
     <a class="btn ghost" href="{{ url_for('export_invoice', iid=inv.id) }}">Download XLSX</a>
-    {% if inv.closed_at %}<span class="muted">Closed {{ inv.closed_at.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}
+    {% if inv.status != 'Void' %}
+      <form method="post" action="{{ url_for('void_invoice', iid=inv.id) }}"
+            onsubmit="return confirm('Void invoice {{ inv.number }}? It will not be billed.')" style="display:inline">
+        <button class="btn grey" type="submit">Void</button></form>
+    {% endif %}
+    {% if inv.status=='Void' %}<span class="muted">Voided — not billed.</span>
+    {% elif inv.closed_at %}<span class="muted">Closed {{ inv.closed_at.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}
   </div>
   <p class="muted" style="margin:12px 0 0">
     Each line is reconciled against the contracted rate and the period's eligibility:

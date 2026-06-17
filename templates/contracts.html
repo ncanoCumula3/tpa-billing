@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% set active='contracts' %}
 {% block body %}
-<h1>Contracts</h1>
+<div style="display:flex;align-items:center;justify-content:space-between">
+  <h1>Contracts</h1>
+  <a class="btn" href="{{ url_for('new_contract') }}">+ New contract</a>
+</div>
 <p class="sub">Each administrative-services agreement and its fee schedule (PEPM, per-participant, per-transaction, or flat).</p>
 <div class="panel tight">
 <table>

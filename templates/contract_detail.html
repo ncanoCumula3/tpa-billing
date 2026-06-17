@@ -3,7 +3,10 @@
 {% block title %}{{ c.number }} · {{ PRODUCT }}{% endblock %}
 {% block body %}
 <div class="crumb"><a href="{{ url_for('contracts') }}">Contracts</a> / {{ c.client.name }}</div>
-<h1>{{ c.name }}</h1>
+<div style="display:flex;align-items:center;justify-content:space-between">
+  <h1>{{ c.name }}</h1>
+  <a class="btn ghost" href="{{ url_for('edit_contract', cid=c.id) }}">Edit contract</a>
+</div>
 
 <div class="steps">
   <div class="s done">1 · Contract</div>
@@ -67,6 +70,14 @@
 
 <h2>Eligibility &amp; invoicing</h2>
 <div class="panel">
+  <form method="post" action="{{ url_for('upload_eligibility', cid=c.id) }}"
+        enctype="multipart/form-data" class="btnrow" style="margin-bottom:6px">
+    <input type="file" name="file" accept=".csv" required>
+    <input name="month" placeholder="Period e.g. 2026-04" required style="width:160px">
+    <input name="label" placeholder="Label (optional)" style="width:200px">
+    <button class="btn sm" type="submit">Upload eligibility</button>
+  </form>
+  <p class="muted" style="margin:0 0 14px">CSV columns: <b>metric_key</b>, <b>count</b> (optional <b>label</b>) — one row per metric, e.g. <code>enrolled_employees,412</code>.</p>
   {% if periods %}
   <table>
     <thead><tr><th>Activity period</th><th>Source</th><th class="num">Metrics</th><th></th></tr></thead>
@@ -101,7 +112,7 @@
     <tr>
       <td><a href="{{ url_for('invoice_detail', iid=i.id) }}">{{ i.number }}</a></td>
       <td>{{ i.month }}</td>
-      <td><span class="pill {{ 'green' if i.status=='Closed' else 'amber' if i.status=='Hold' else 'blue' if i.status=='Issued' else 'grey' }}">{{ i.status }}</span></td>
+      <td><span class="pill {{ 'green' if i.status=='Closed' else 'red' if i.status=='Void' else 'amber' if i.status=='Hold' else 'blue' if i.status=='Issued' else 'grey' }}">{{ i.status }}</span></td>
       <td class="num">${{ '{:,.2f}'.format(i.billed_total) }}</td>
       <td class="num">${{ '{:,.2f}'.format(i.held_total) }}</td>
     </tr>

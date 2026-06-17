@@ -66,3 +66,13 @@ def reopen(invoice):
     invoice.closed_at = None
     db.session.commit()
     return invoice
+
+
+def void(invoice, reason=""):
+    """Cancel the invoice — nothing is billed; it stays on file for the record."""
+    invoice.status = "Void"
+    invoice.closed_at = datetime.utcnow()
+    if reason:
+        invoice.terms = (invoice.terms or "") + f" · VOID: {reason}"
+    db.session.commit()
+    return invoice

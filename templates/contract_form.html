@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% set active='contracts' %}
+{% block title %}{{ 'Edit' if c else 'New' }} contract · {{ PRODUCT }}{% endblock %}
+{% block body %}
+<div class="crumb"><a href="{{ url_for('contracts') }}">Contracts</a> /
+  {{ 'Edit ' + c.number if c else 'New contract' }}</div>
+<h1>{{ 'Edit contract' if c else 'New contract' }}</h1>
+<p class="sub">A client's administrative-services agreement and its monthly fee schedule.</p>
+
+<form method="post">
+  <h2>Client</h2>
+  <div class="panel">
+    <div class="meta">
+      <div><div class="lbl">Client name</div>
+        <input name="client_name" list="clientlist" required
+               value="{{ c.client.name if c else '' }}" style="width:100%">
+        <datalist id="clientlist">{% for cl in clients %}<option value="{{ cl.name }}">{% endfor %}</datalist>
+      </div>
+      <div><div class="lbl">Industry</div><input name="industry" value="{{ c.client.industry if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Broker</div><input name="broker" value="{{ c.client.broker if c else '' }}" style="width:100%"></div>
+    </div>
+  </div>
+
+  <h2>Contract</h2>
+  <div class="panel">
+    <div class="meta">
+      <div><div class="lbl">Contract name</div><input name="name" required value="{{ c.name if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Number</div><input name="number" placeholder="ASA-2026-0150" value="{{ c.number if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Effective start (YYYY-MM-DD)</div><input name="effective_start" placeholder="2026-01-01" value="{{ c.effective_start if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Effective end (YYYY-MM-DD)</div><input name="effective_end" placeholder="2026-12-31" value="{{ c.effective_end if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Funding</div><input name="funding_type" placeholder="Self-funded" value="{{ c.funding_type if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Plan year</div><input name="plan_year" placeholder="2026 calendar year" value="{{ c.plan_year if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Payment terms</div><input name="payment_terms" placeholder="Net 15 · ACH" value="{{ c.payment_terms if c else 'Net 15 · ACH' }}" style="width:100%"></div>
+      <div><div class="lbl">Renewal</div><input name="renewal" value="{{ c.renewal if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Late fee</div><input name="late_fee" value="{{ c.late_fee if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Claims run-out</div><input name="runout" value="{{ c.runout if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Covered lives</div><input name="covered_lives" type="number" value="{{ c.covered_lives if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Plan-sponsor contact</div><input name="primary_contact" value="{{ c.primary_contact if c else '' }}" style="width:100%"></div>
+      <div><div class="lbl">Contact email</div><input name="contact_email" value="{{ c.contact_email if c else '' }}" style="width:100%"></div>
+    </div>
+    <div style="margin-top:12px"><div class="lbl">Service-level agreement</div>
+      <input name="sla" value="{{ c.sla if c else '' }}" style="width:100%"></div>
+  </div>
+
+  <h2>Fee schedule</h2>
+  <div class="panel tight">
+  <table>
+    <thead><tr><th>Service</th><th>Basis</th><th>Rate</th><th>Metric key</th><th>Roster qty</th><th>Status</th><th></th></tr></thead>
+    <tbody id="lines">
+      {% for l in (c.lines if c else []) %}
+      <tr>
+        <td><input name="line_service" value="{{ l.service }}"></td>
+        <td><select name="line_basis">{% for v,lab in bases.items() %}<option value="{{ v }}" {{ 'selected' if l.basis==v }}>{{ lab }}</option>{% endfor %}</select></td>
+        <td><input name="line_rate" type="number" step="0.01" value="{{ l.rate }}" style="width:90px"></td>
+        <td><input name="line_metric" value="{{ l.metric_key or '' }}"></td>
+        <td><input name="line_baseline" type="number" value="{{ l.baseline_count }}" style="width:90px"></td>
+        <td><select name="line_active"><option value="1" {{ 'selected' if l.active }}>Active</option><option value="0" {{ 'selected' if not l.active }}>Discontinued</option></select></td>
+        <td><button type="button" class="btn grey sm" onclick="this.closest('tr').remove()">✕</button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="btnrow">
+    <button type="button" class="btn ghost sm" onclick="addLine()">+ Add fee line</button>
+  </div>
+
+  <div class="btnrow" style="margin-top:20px">
+    <button class="btn" type="submit">{{ 'Save changes' if c else 'Create contract' }}</button>
+    <a class="btn grey" href="{{ url_for('contract_detail', cid=c.id) if c else url_for('contracts') }}">Cancel</a>
+  </div>
+</form>
+
+<template id="rowtpl">
+  <tr>
+    <td><input name="line_service" placeholder="Medical Plan Administration"></td>
+    <td><select name="line_basis">{% for v,lab in bases.items() %}<option value="{{ v }}">{{ lab }}</option>{% endfor %}</select></td>
+    <td><input name="line_rate" type="number" step="0.01" placeholder="5.25" style="width:90px"></td>
+    <td><input name="line_metric" placeholder="enrolled_employees"></td>
+    <td><input name="line_baseline" type="number" placeholder="0" style="width:90px"></td>
+    <td><select name="line_active"><option value="1">Active</option><option value="0">Discontinued</option></select></td>
+    <td><button type="button" class="btn grey sm" onclick="this.closest('tr').remove()">✕</button></td>
+  </tr>
+</template>
+<script>
+function addLine(){ document.getElementById('lines').appendChild(
+  document.getElementById('rowtpl').content.cloneNode(true)); }
+if(!document.querySelector('#lines tr')) addLine();
+</script>
+{% endblock %}

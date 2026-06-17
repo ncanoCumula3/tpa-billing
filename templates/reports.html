@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% set active='reports' %}
+{% block title %}Reports · {{ PRODUCT }}{% endblock %}
+{% block body %}
+<h1>Reports</h1>
+<p class="sub">Billing across all clients — what's been billed, what's held, and where it comes from.</p>
+
+<div class="cards">
+  <div class="card"><div class="k">Billed (closed)</div><div class="v">${{ '{:,.0f}'.format(billed) }}</div></div>
+  <div class="card"><div class="k">Held for correction</div><div class="v">${{ '{:,.0f}'.format(held) }}</div></div>
+  <div class="card"><div class="k">Active contracts</div><div class="v">{{ n_active }} / {{ n_contracts }}</div></div>
+  <div class="card"><div class="k">Annualized (active)</div><div class="v">${{ '{:,.0f}'.format(annualized) }}</div></div>
+</div>
+
+<div class="btnrow"><a class="btn ghost sm" href="{{ url_for('reports_export') }}">Download invoices CSV</a></div>
+
+<h2>Invoices by status</h2>
+<div class="panel tight">
+<table>
+  <thead><tr><th>Status</th><th class="num">Count</th></tr></thead>
+  <tbody>
+  {% for s, n in by_status.items() %}
+    <tr><td><span class="pill {{ 'green' if s=='Closed' else 'amber' if s=='Hold' else 'red' if s=='Void' else 'blue' if s=='Issued' else 'grey' }}">{{ s }}</span></td><td class="num">{{ n }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Billed by client</h2>
+<div class="panel tight">
+<table>
+  <thead><tr><th>Client</th><th class="num">Billed (closed)</th></tr></thead>
+  <tbody>
+  {% for name, amt in by_client %}
+    <tr><td>{{ name }}</td><td class="num">${{ '{:,.2f}'.format(amt) }}</td></tr>
+  {% else %}
+    <tr><td colspan="2" class="muted">No closed invoices yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Billed by month</h2>
+<div class="panel tight">
+<table>
+  <thead><tr><th>Period</th><th class="num">Billed (closed)</th></tr></thead>
+  <tbody>
+  {% for m, amt in by_month %}
+    <tr><td>{{ m }}</td><td class="num">${{ '{:,.2f}'.format(amt) }}</td></tr>
+  {% else %}
+    <tr><td colspan="2" class="muted">No closed invoices yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
