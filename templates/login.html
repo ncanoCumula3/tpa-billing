@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · {{ PRODUCT }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <style>
+    body{display:flex;align-items:center;justify-content:center;min-height:100vh;
+      background:linear-gradient(135deg,var(--navy),var(--primary-dark))}
+    .card{background:#fff;border-radius:14px;padding:34px 34px 30px;width:360px;
+      box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+    .brand img{height:24px}
+    .brand small{color:var(--slate-500);font-size:11px;letter-spacing:1px;text-transform:uppercase;
+      border-left:1px solid var(--border);padding-left:10px}
+    h1{font-size:19px;margin:14px 0 4px}
+    .sub{color:var(--slate-500);font-size:13px;margin-bottom:20px}
+    label{display:block;font-size:13px;color:var(--slate-700);margin:12px 0 5px;font-weight:600}
+    input{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:8px;font-size:14px}
+    input:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px var(--primary-bg)}
+    .btn{width:100%;margin-top:20px;padding:12px;font-size:15px}
+    .err{background:var(--red-bg);color:var(--red);padding:9px 12px;border-radius:8px;font-size:13px;
+      font-weight:600;margin-bottom:14px}
+  </style>
+</head>
+<body>
+  <form class="card" method="post" action="{{ url_for('login') }}" autocomplete="off">
+    <div class="brand">
+      <img src="{{ url_for('static', filename='oakmore_logo_white.png') }}"
+           style="filter:brightness(0)" alt="Oakmore Labs">
+      <small>TPA&nbsp;Billing</small>
+    </div>
+    <h1>Sign in</h1>
+    <div class="sub">Enter your credentials to continue.</div>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" required autofocus>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required>
+    <button class="btn" type="submit">Sign in</button>
+  </form>
+</body>
+</html>

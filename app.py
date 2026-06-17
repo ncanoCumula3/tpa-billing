@@ -9,7 +9,7 @@ eligibility, so you never over- or under-bill.
 import os
 
 from flask import (Flask, render_template, redirect, url_for, request,
-                   Response, flash)
+                   Response, flash, session)
 
 from models import (db, Client, Contract, ActivityPeriod, Invoice)
 from services import invoicer, exporter
@@ -31,6 +31,34 @@ def create_app():
     @app.context_processor
     def inject():
         return {"PRODUCT": PRODUCT}
+
+    # ---------- auth (credentials come from env, never the repo) ----------
+    TPA_USER = os.environ.get("TPA_USER", "")
+    TPA_PASSWORD = os.environ.get("TPA_PASSWORD", "")
+
+    @app.before_request
+    def _require_login():
+        if request.endpoint in ("login", "logout", "healthz", "static"):
+            return
+        if not session.get("user"):
+            return redirect(url_for("login"))
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        error = None
+        if request.method == "POST":
+            email = (request.form.get("email") or "").strip()
+            password = request.form.get("password") or ""
+            if TPA_PASSWORD and email == TPA_USER and password == TPA_PASSWORD:
+                session["user"] = email
+                return redirect(url_for("dashboard"))
+            error = "Invalid email or password."
+        return render_template("login.html", error=error)
+
+    @app.route("/logout")
+    def logout():
+        session.clear()
+        return redirect(url_for("login"))
 
     @app.route("/")
     def dashboard():
