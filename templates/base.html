@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ PRODUCT }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+</head>
+<body>
+  <div class="nav">
+    <a href="{{ url_for('dashboard') }}" class="brand">
+      <img src="{{ url_for('static', filename='oakmore_logo.svg') }}" alt="Oakmore Labs">
+      <small>TPA&nbsp;Billing</small></a>
+    <span class="sp"></span>
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active=='dash' }}">Dashboard</a>
+    <a href="{{ url_for('contracts') }}" class="{{ 'active' if active=='contracts' }}">Contracts</a>
+    <a href="{{ url_for('invoices') }}" class="{{ 'active' if active=='invoices' }}">Invoices</a>
+  </div>
+  <div class="wrap">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+  </div>
+</body>
+</html>

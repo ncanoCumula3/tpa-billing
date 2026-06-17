@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: oakmore-tpa-billing
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt && python seed.py
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: SECRET_KEY
+        generateValue: true

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% set active='invoices' %}
+{% set c = inv.counts() %}
+{% block title %}{{ inv.number }} · {{ PRODUCT }}{% endblock %}
+{% block body %}
+<div class="crumb">
+  <a href="{{ url_for('invoices') }}">Invoices</a> /
+  {% if contract %}<a href="{{ url_for('contract_detail', cid=contract.id) }}">{{ client.name }}</a>{% else %}{{ client.name }}{% endif %}
+</div>
+<h1>Invoice {{ inv.number }}
+  <span class="pill {{ 'green' if inv.status=='Closed' else 'amber' if inv.status=='Hold' else 'blue' if inv.status=='Issued' else 'grey' }}">{{ inv.status }}</span>
+</h1>
+<p class="sub">{{ client.name }} · {{ inv.month }} · {{ contract.number if contract }} · {{ inv.terms }}</p>
+
+<div class="cards">
+  <div class="card"><div class="k">Billed</div><div class="v">${{ '{:,.2f}'.format(inv.billed_total) }}</div></div>
+  <div class="card"><div class="k">Held for correction</div><div class="v">${{ '{:,.2f}'.format(inv.held_total) }}</div></div>
+  <div class="card"><div class="k">Reconciled</div><div class="v" style="color:var(--green)">{{ c.green }}<span style="font-size:14px;color:var(--slate-500)"> clean</span></div></div>
+  <div class="card"><div class="k">Variance / Hold</div><div class="v"><span style="color:var(--amber)">{{ c.yellow }}</span> <span class="muted" style="font-size:14px">/</span> <span style="color:var(--red)">{{ c.red }}</span></div></div>
+</div>
+
+<div class="panel">
+  <div class="btnrow">
+    {% if inv.status in ('Draft','Issued','Hold') %}
+      {% if inv.status=='Draft' %}
+        <form method="post" action="{{ url_for('issue_invoice', iid=inv.id) }}"><button class="btn ghost" type="submit">Issue</button></form>
+      {% endif %}
+      <form method="post" action="{{ url_for('close_invoice', iid=inv.id) }}">
+        <button class="btn" type="submit">Close against contract &amp; eligibility</button></form>
+    {% else %}
+      <form method="post" action="{{ url_for('reopen_invoice', iid=inv.id) }}"><button class="btn grey" type="submit">Re-open</button></form>
+    {% endif %}
+    <a class="btn ghost" href="{{ url_for('export_invoice', iid=inv.id) }}">Download XLSX</a>
+    {% if inv.closed_at %}<span class="muted">Closed {{ inv.closed_at.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}
+  </div>
+  <p class="muted" style="margin:12px 0 0">
+    Each line is reconciled against the contracted rate and the period's eligibility:
+    <span class="dot green"></span>matches · <span class="dot yellow"></span>variance, billed ·
+    <span class="dot red"></span>held — not billed.
+  </p>
+</div>
+
+{% set held = inv.lines | selectattr('charged', 'equalto', false) | list %}
+{% if held %}
+<div class="held-callout">
+  <div class="hc-head">
+    <span class="hc-ico">⚠</span>
+    <div>
+      <div class="hc-title">{{ held|length }} line{{ 's' if held|length != 1 }} held for correction —
+        <b>${{ '{:,.2f}'.format(inv.held_total) }}</b> not billed</div>
+      <div class="hc-sub">Resolve these before the invoice goes out. They are excluded from the billed total.</div>
+    </div>
+  </div>
+  <ul class="hc-list">
+    {% for l in held %}
+    <li><span class="hc-svc">{{ l.service }}</span>
+      <span class="hc-amt">${{ '{:,.2f}'.format(l.amount) }}</span>
+      <span class="hc-why">{{ l.recon_reason }}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="panel tight">
+<table>
+  <thead><tr><th></th><th>Service</th><th>Basis</th><th class="num">Rate</th>
+    <th class="num">Billed</th><th class="num">Eligible</th><th class="num">Amount</th>
+    <th>Billed?</th><th>Reconciliation</th></tr></thead>
+  <tbody>
+  {% for l in inv.lines %}
+    <tr class="row-{{ l.recon_status[0] }}">
+      <td><span class="dot {{ l.recon_status }}"></span></td>
+      <td>{{ l.service }}</td>
+      <td class="muted">{{ l.basis_label }}</td>
+      <td class="num">${{ '{:,.2f}'.format(l.contract_rate) }}</td>
+      <td class="num">{{ '—' if l.basis=='FLAT' else l.billed_count }}</td>
+      <td class="num">{{ '—' if l.actual_count is none else l.actual_count }}</td>
+      <td class="num"><b>${{ '{:,.2f}'.format(l.amount) }}</b></td>
+      <td>{% if l.charged %}<span class="pill green">Billed</span>{% else %}<span class="pill red">Held</span>{% endif %}</td>
+      <td class="muted">{{ l.recon_reason }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr><th colspan="6" class="num">Billed total</th><th class="num">${{ '{:,.2f}'.format(inv.billed_total) }}</th><th colspan="2"></th></tr>
+  </tfoot>
+</table>
+</div>
+{% endblock %}

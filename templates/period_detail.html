@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% set active='contracts' %}
+{% block title %}{{ p.month }} eligibility · {{ PRODUCT }}{% endblock %}
+{% block body %}
+<div class="crumb">
+  {% if contract %}<a href="{{ url_for('contract_detail', cid=contract.id) }}">{{ p.client.name }}</a> / {% endif %}Eligibility
+</div>
+<h1>{{ p.label or p.month }}</h1>
+<p class="sub">{{ p.client.name }} · {{ p.month }} · <span class="pill indigo">{{ p.source }}</span></p>
+
+<div class="panel tight">
+<table>
+  <thead><tr><th>Metric</th><th>Key</th><th class="num">Count this period</th></tr></thead>
+  <tbody>
+  {% for m in p.metrics %}
+    <tr>
+      <td>{{ m.label }}</td>
+      <td class="muted">{{ m.metric_key }}</td>
+      <td class="num"><b>{{ m.count }}</b></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="muted">These actuals are what each invoice line is reconciled against — the roster on file must match the eligibility here.</p>
+{% endblock %}
